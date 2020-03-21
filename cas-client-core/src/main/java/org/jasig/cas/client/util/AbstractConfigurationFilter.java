@@ -18,13 +18,10 @@
  */
 package org.jasig.cas.client.util;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
 
+import org.jasig.cas.client.Filter;
 import org.jasig.cas.client.configuration.ConfigurationKey;
 import org.jasig.cas.client.configuration.ConfigurationStrategy;
-import org.jasig.cas.client.configuration.ConfigurationStrategyName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,12 +41,12 @@ public abstract class AbstractConfigurationFilter implements Filter {
     private boolean ignoreInitConfiguration = false;
 
     private ConfigurationStrategy configurationStrategy;
-
+// TODO Frodoking
     @Override
-    public void init(final FilterConfig filterConfig) throws ServletException {
-        final String configurationStrategyName = filterConfig.getServletContext().getInitParameter(CONFIGURATION_STRATEGY_KEY);
-        this.configurationStrategy = ReflectUtils.newInstance(ConfigurationStrategyName.resolveToConfigurationStrategy(configurationStrategyName));
-        this.configurationStrategy.init(filterConfig, getClass());
+    public void init(final Filter.FilterConfig filterConfig)  {
+//        final String configurationStrategyName = filterConfig.getServletContext().getInitParameter(CONFIGURATION_STRATEGY_KEY);
+//        this.configurationStrategy = ReflectUtils.newInstance(ConfigurationStrategyName.resolveToConfigurationStrategy(configurationStrategyName));
+//        this.configurationStrategy.init(filterConfig, getClass());
     }
 
     protected final boolean getBoolean(final ConfigurationKey<Boolean> configurationKey) {

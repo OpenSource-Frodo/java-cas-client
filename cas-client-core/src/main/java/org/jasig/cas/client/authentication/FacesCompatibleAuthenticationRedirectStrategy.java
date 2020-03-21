@@ -19,10 +19,12 @@
 package org.jasig.cas.client.authentication;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.jasig.cas.client.util.CommonUtils;
+import reactor.core.CoreSubscriber;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.ParallelFlux;
+import reactor.netty.http.server.HttpServerRequest;
+import reactor.netty.http.server.HttpServerResponse;
 
 /**
  * Implementation of the redirect strategy that can handle a Faces Ajax request in addition to the standard redirect style.
@@ -33,22 +35,29 @@ import org.jasig.cas.client.util.CommonUtils;
 public final class FacesCompatibleAuthenticationRedirectStrategy implements AuthenticationRedirectStrategy {
 
     private static final String FACES_PARTIAL_AJAX_PARAMETER = "javax.faces.partial.ajax";
-
     @Override
-    public void redirect(final HttpServletRequest request, final HttpServletResponse response,
-                         final String potentialRedirectUrl) throws IOException {
-
-        if (CommonUtils.isNotBlank(request.getParameter(FACES_PARTIAL_AJAX_PARAMETER))) {
+    public Mono<Void> redirect(HttpServerRequest request, HttpServerResponse response, String potentialRedirectUrl) throws IOException {
+        if (CommonUtils.isNotBlank(request.param(FACES_PARTIAL_AJAX_PARAMETER))) {
             // this is an ajax request - redirect ajaxly
-            response.setContentType("text/xml");
-            response.setStatus(200);
+            response.header("ContentType","text/xml");
+            response.status(200);
 
-            final PrintWriter writer = response.getWriter();
-            writer.write("<?xml version='1.0' encoding='UTF-8'?>");
-            writer.write(String.format("<partial-response><redirect url=\"%s\"></redirect></partial-response>",
-                    potentialRedirectUrl));
+            response.sendString(new ParallelFlux<String>() {
+                @Override
+                public int parallelism() {
+                    return 0;
+                }
+
+                @Override
+                protected void subscribe(CoreSubscriber<? super String>[] coreSubscribers) {
+                    coreSubscribers[0].onNext("<?xml version='1.0' encoding='UTF-8'?>");
+                    coreSubscribers[0].onNext(String.format("<partial-response><redirect url=\"%s\"></redirect></partial-response>",
+                            potentialRedirectUrl));
+                    coreSubscribers[0].onComplete();
+                }
+            });
         } else {
-            response.sendRedirect(potentialRedirectUrl);
+           return response.sendRedirect(potentialRedirectUrl);
         }
     }
 }

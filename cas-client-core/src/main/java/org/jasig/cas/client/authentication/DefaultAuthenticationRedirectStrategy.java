@@ -18,9 +18,11 @@
  */
 package org.jasig.cas.client.authentication;
 
+import reactor.core.publisher.Mono;
+import reactor.netty.http.server.HttpServerRequest;
+import reactor.netty.http.server.HttpServerResponse;
+
 import java.io.IOException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 /**
  * Implementation of the {@link AuthenticationRedirectStrategy} class that preserves the original behavior that existed prior to 3.3.0.
@@ -30,9 +32,10 @@ import javax.servlet.http.HttpServletResponse;
  */
 public final class DefaultAuthenticationRedirectStrategy implements AuthenticationRedirectStrategy {
 
+
     @Override
-    public void redirect(final HttpServletRequest request, final HttpServletResponse response,
-                         final String potentialRedirectUrl) throws IOException {
+    public Mono<Void> redirect(HttpServerRequest request, HttpServerResponse response, String potentialRedirectUrl) throws IOException {
         response.sendRedirect(potentialRedirectUrl);
+        return null;
     }
 }

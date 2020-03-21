@@ -18,12 +18,14 @@
  */
 package org.jasig.cas.client.util;
 
-import java.io.IOException;
 import java.util.Map;
-import javax.servlet.*;
-import javax.servlet.http.HttpServletRequest;
+import org.jasig.cas.client.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Mono;
 
 /**
  * A Delegating Filter looks up a parameter in the request object and matches
@@ -82,11 +84,12 @@ public final class DelegatingFilter implements Filter {
         // nothing to do here
     }
 
-    @Override
-    public void doFilter(final ServletRequest request, final ServletResponse response, final FilterChain filterChain)
-            throws IOException, ServletException {
 
-        final String parameter = CommonUtils.safeGetParameter((HttpServletRequest) request, this.requestParameterName);
+    @Override
+    public Mono<Void> filter(ServerWebExchange serverWebExchange, WebFilterChain webFilterChain) {
+        ServerHttpRequest request = serverWebExchange.getRequest();
+
+        final String parameter = CommonUtils.safeGetParameter(request, this.requestParameterName);
 
         if (CommonUtils.isNotEmpty(parameter)) {
             for (final String key : this.delegators.keySet()) {
@@ -94,8 +97,7 @@ public final class DelegatingFilter implements Filter {
                     final Filter filter = this.delegators.get(key);
                     logger.debug("Match found for parameter [{}] with value [{}]. Delegating to filter [{}]",
                             this.requestParameterName, parameter, filter.getClass().getName());
-                    filter.doFilter(request, response, filterChain);
-                    return;
+                    return webFilterChain.filter(serverWebExchange);
                 }
             }
         }
@@ -103,14 +105,15 @@ public final class DelegatingFilter implements Filter {
         logger.debug("No match found for parameter [{}] with value [{}]", this.requestParameterName, parameter);
 
         if (this.defaultFilter != null) {
-            this.defaultFilter.doFilter(request, response, filterChain);
+            return this.defaultFilter.filter(serverWebExchange, webFilterChain);
         } else {
-            filterChain.doFilter(request, response);
+            return webFilterChain.filter(serverWebExchange);
         }
     }
 
     @Override
-    public void init(final FilterConfig filterConfig) throws ServletException {
+    public void init(final FilterConfig filterConfig) {
         // nothing to do here.
     }
+
 }

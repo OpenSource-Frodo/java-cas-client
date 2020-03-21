@@ -18,13 +18,13 @@
  */
 package org.jasig.cas.client.util;
 
+import org.jasig.cas.client.Filter;
 import org.jasig.cas.client.Protocol;
 import org.jasig.cas.client.configuration.ConfigurationKeys;
 
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+
 import java.util.Arrays;
 
 /**
@@ -64,7 +64,7 @@ public abstract class AbstractCasFilter extends AbstractConfigurationFilter {
     }
 
     @Override
-    public final void init(final FilterConfig filterConfig) throws ServletException {
+    public final void init(final Filter.FilterConfig filterConfig) {
         super.init(filterConfig);
         if (!isIgnoreInitConfiguration()) {
             setServerName(getString(ConfigurationKeys.SERVER_NAME));
@@ -82,7 +82,7 @@ public abstract class AbstractCasFilter extends AbstractConfigurationFilter {
      * @throws ServletException if there is a problem.
      *
      */
-    protected void initInternal(final FilterConfig filterConfig) throws ServletException {
+    protected void initInternal(final FilterConfig filterConfig) {
         // template method
     }
 
@@ -103,7 +103,7 @@ public abstract class AbstractCasFilter extends AbstractConfigurationFilter {
         // nothing to do
     }
 
-    protected final String constructServiceUrl(final HttpServletRequest request, final HttpServletResponse response) {
+    protected final String constructServiceUrl(final ServerHttpRequest request, final ServerHttpResponse response) {
         return CommonUtils.constructServiceUrl(request, response, this.service, this.serverName,
                 this.protocol.getServiceParameterName(),
                 this.protocol.getArtifactParameterName(), this.encodeServiceUrl);
@@ -142,7 +142,7 @@ public abstract class AbstractCasFilter extends AbstractConfigurationFilter {
      * @param request the HTTP ServletRequest.  CANNOT be NULL.
      * @return the ticket if its found, null otherwise.
      */
-    protected String retrieveTicketFromRequest(final HttpServletRequest request) {
+    protected String retrieveTicketFromRequest(final ServerHttpRequest request) {
         return CommonUtils.safeGetParameter(request, this.protocol.getArtifactParameterName(),
                 Arrays.asList(this.protocol.getArtifactParameterName()));
     }

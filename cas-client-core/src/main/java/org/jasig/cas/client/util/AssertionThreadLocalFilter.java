@@ -18,11 +18,14 @@
  */
 package org.jasig.cas.client.util;
 
-import java.io.IOException;
-import javax.servlet.*;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
+
+import org.jasig.cas.client.Filter;
 import org.jasig.cas.client.validation.Assertion;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilterChain;
+import org.springframework.web.server.WebSession;
+import reactor.core.publisher.Mono;
 
 /**
  * Places the assertion in a ThreadLocal such that other resources can access it that do not have access to the web tier session.
@@ -33,25 +36,25 @@ import org.jasig.cas.client.validation.Assertion;
 public final class AssertionThreadLocalFilter implements Filter {
 
     @Override
-    public void init(final FilterConfig filterConfig) throws ServletException {
+    public void init(final FilterConfig filterConfig) {
         // nothing to do here
     }
-
     @Override
-    public void doFilter(final ServletRequest servletRequest, final ServletResponse servletResponse,
-                         final FilterChain filterChain) throws IOException, ServletException {
-        final HttpServletRequest request = (HttpServletRequest) servletRequest;
-        final HttpSession session = request.getSession(false);
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        final ServerHttpRequest request = exchange.getRequest();
+        final Mono<WebSession> session = exchange.getSession();
         final Assertion assertion = (Assertion) (session == null ? request
                 .getAttribute(AbstractCasFilter.CONST_CAS_ASSERTION) : session
                 .getAttribute(AbstractCasFilter.CONST_CAS_ASSERTION));
 
         try {
             AssertionHolder.setAssertion(assertion);
-            filterChain.doFilter(servletRequest, servletResponse);
+            return chain.filter(exchange);
         } finally {
             AssertionHolder.clear();
         }
+
+        return null;
     }
 
     @Override

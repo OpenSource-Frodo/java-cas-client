@@ -18,9 +18,12 @@
  */
 package org.jasig.cas.client.authentication;
 
+
+import reactor.netty.http.server.HttpServerRequest;
+import reactor.netty.http.server.HttpServerResponse;
+import reactor.core.publisher.Mono;
+
 import java.io.IOException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 /**
  * Interface to abstract the authentication strategy for redirecting.  The traditional method was to always just redirect,
@@ -40,7 +43,7 @@ public interface AuthenticationRedirectStrategy {
      * @param potentialRedirectUrl the url that might be used (there are no guarantees of course!)
      * @throws IOException the exception to throw if there is some type of error.  This will bubble up through the filter.
      */
-    void redirect(HttpServletRequest request, HttpServletResponse response, String potentialRedirectUrl)
+    Mono<Void> redirect(HttpServerRequest request, HttpServerResponse response, String potentialRedirectUrl)
             throws IOException;
 
 }

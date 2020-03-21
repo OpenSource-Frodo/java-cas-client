@@ -24,16 +24,12 @@ import org.jasig.cas.client.util.AbstractCasFilter;
 import org.jasig.cas.client.util.CommonUtils;
 import org.jasig.cas.client.util.ReflectUtils;
 import org.jasig.cas.client.validation.Assertion;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Mono;
 
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -101,7 +97,7 @@ public class AuthenticationFilter extends AbstractCasFilter {
     }
 
     @Override
-    protected void initInternal(final FilterConfig filterConfig) throws ServletException {
+    protected void initInternal(final FilterConfig filterConfig) {
         if (!isIgnoreInitConfiguration()) {
             super.initInternal(filterConfig);
 
@@ -163,11 +159,10 @@ public class AuthenticationFilter extends AbstractCasFilter {
     }
 
     @Override
-    public final void doFilter(final ServletRequest servletRequest, final ServletResponse servletResponse,
-                               final FilterChain filterChain) throws IOException, ServletException {
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
 
-        final HttpServletRequest request = (HttpServletRequest) servletRequest;
-        final HttpServletResponse response = (HttpServletResponse) servletResponse;
+        final ServerHttpRequest request =  exchange.getRequest();
+        final ServerHttpResponse response = exchange.getResponse();
 
         if (isRequestUrlExcluded(request)) {
             logger.debug("Request is ignored.");
@@ -179,8 +174,7 @@ public class AuthenticationFilter extends AbstractCasFilter {
         final Assertion assertion = session != null ? (Assertion) session.getAttribute(CONST_CAS_ASSERTION) : null;
 
         if (assertion != null) {
-            filterChain.doFilter(request, response);
-            return;
+            return chain.filter(exchange);
         }
 
         final String serviceUrl = constructServiceUrl(request, response);
@@ -188,8 +182,7 @@ public class AuthenticationFilter extends AbstractCasFilter {
         final boolean wasGatewayed = this.gateway && this.gatewayStorage.hasGatewayedAlready(request, serviceUrl);
 
         if (CommonUtils.isNotBlank(ticket) || wasGatewayed) {
-            filterChain.doFilter(request, response);
-            return;
+            return chain.filter(exchange);
         }
 
         final String modifiedServiceUrl;
@@ -208,7 +201,8 @@ public class AuthenticationFilter extends AbstractCasFilter {
             getProtocol().getServiceParameterName(), modifiedServiceUrl, this.renew, this.gateway, this.method);
 
         logger.debug("redirecting to \"{}\"", urlToRedirectTo);
-        this.authenticationRedirectStrategy.redirect(request, response, urlToRedirectTo);
+        return this.authenticationRedirectStrategy.redirect(request, response, urlToRedirectTo);
+
     }
 
     public final void setRenew(final boolean renew) {
@@ -235,14 +229,14 @@ public class AuthenticationFilter extends AbstractCasFilter {
         this.gatewayStorage = gatewayStorage;
     }
 
-    private boolean isRequestUrlExcluded(final HttpServletRequest request) {
+    private boolean isRequestUrlExcluded(final ServerHttpRequest request) {
         if (this.ignoreUrlPatternMatcherStrategyClass == null) {
             return false;
         }
 
-        final StringBuffer urlBuffer = request.getRequestURL();
-        if (request.getQueryString() != null) {
-            urlBuffer.append("?").append(request.getQueryString());
+        final StringBuffer urlBuffer = request.getURI().getQuery();
+        if (request.getURI().getQuery() != null) {
+            urlBuffer.append("?").append(request.getURI().getQuery());
         }
         final String requestUri = urlBuffer.toString();
         return this.ignoreUrlPatternMatcherStrategyClass.matches(requestUri);
@@ -253,4 +247,7 @@ public class AuthenticationFilter extends AbstractCasFilter {
         this.ignoreUrlPatternMatcherStrategyClass = ignoreUrlPatternMatcherStrategyClass;
     }
 
+
+        return null;
+    }
 }
